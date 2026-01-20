@@ -98,3 +98,6 @@ This project is developed for the Expert Hackathon 2026.
 
 Heubert Sans
 Note: script_runners are the python code that was created to test the functionality of the app. They got useless as the test completed and main logic was deployed in app.py. It is kept for the reference of how the system was developed. Do not delete it.
+
+## Deployment
+I have deployed this project on Render: https://agency-os-bot-4.onrender.com/
