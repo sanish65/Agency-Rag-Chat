@@ -1,0 +1,2221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agency OS Chat</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            overflow: hidden;
+            height: 100vh;
+        }
+        
+        .app-container {
+            display: flex;
+            height: 100vh;
+            gap: 0;
+        }
+        
+        /* Left Sidebar - Conversations */
+        .sidebar {
+            width: 280px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 4px 0 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .sidebar-header {
+            padding: 20px 16px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .sidebar-header h2 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+        
+        .new-chat-btn {
+            width: 100%;
+            padding: 8px 14px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 13px;
+        }
+        
+        .new-chat-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .conversation-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+        
+        .conversation-item {
+            padding: 12px 10px;
+            margin-bottom: 6px;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            position: relative;
+        }
+        
+        .conversation-item:hover {
+            background: #f8f9ff;
+            border-color: #667eea;
+            transform: translateX(4px);
+        }
+        
+        .conversation-item.active {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            border-color: #667eea;
+        }
+        
+        .conversation-title {
+            font-size: 13px;
+            font-weight: 500;
+            color: #1a1a2e;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .conversation-time {
+            font-size: 11px;
+            color: #888;
+        }
+        
+        .delete-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            opacity: 0;
+            transition: opacity 0.2s;
+            background: #ff4757;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 3px 7px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+        
+        .conversation-item:hover .delete-btn {
+            opacity: 1;
+        }
+        
+        /* Main Content Area - Chat */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px 0 20px 20px;
+            overflow: hidden;
+            position: relative;
+            min-width: 300px; /* Minimum width when resizing */
+        }
+        
+        .chat-header {
+            text-align: center;
+            margin-bottom: 20px;
+            color: white;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+        
+        .chat-header h1 {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        
+        .chat-header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .chat-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            margin-right: 20px; /* Space for globe sidebar */
+        }
+        
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        
+        .message-wrapper {
+            display: flex;
+            flex-direction: column;
+            max-width: 75%;
+        }
+        
+        .user-msg {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 16px 16px 4px 16px;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            position: relative;
+        }
+        
+        .ai-msg {
+            align-self: flex-start;
+            background: #f8f9ff;
+            color: #1a1a2e;
+            padding: 12px 16px;
+            border-radius: 16px 16px 16px 4px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            white-space: pre-wrap;
+            position: relative;
+        }
+        
+        .action-buttons {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            display: flex;
+            gap: 6px;
+            opacity: 0;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        .message-wrapper:hover .action-buttons {
+            opacity: 1;
+        }
+        
+        .user-msg .action-buttons {
+            right: auto;
+            left: 6px;
+            flex-direction: row-reverse;
+        }
+
+        .copy-btn, .export-btn {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 6px;
+            padding: 3px 8px;
+            font-size: 10px;
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            color: #333;
+        }
+
+        .user-msg .copy-btn, .user-msg .export-btn {
+            background: rgba(0, 0, 0, 0.2);
+            border-color: rgba(255, 255, 255, 0.3);
+            color: white;
+        }
+
+        .export-btn:hover, .copy-btn:hover {
+            background: white;
+            color: #667eea;
+            border-color: #667eea;
+        }
+        
+        .chat-input-area {
+            padding: 16px 20px;
+            background: white;
+            border-top: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        
+        .input-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        #user-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 14px;
+            font-family: 'Outfit', sans-serif;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+        
+        #user-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        }
+        
+        .send-btn {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .stop-btn {
+            padding: 12px 24px;
+            background: #ff4757;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            display: none; /* Hidden by default */
+        }
+        
+        .stop-btn:hover {
+            background: #ff6b81;
+            box-shadow: 0 4px 12px rgba(255, 71, 87, 0.4);
+            transform: translateY(-2px);
+        }
+        
+        .send-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        /* Right Sidebar - Globe */
+        .globe-sidebar {
+            flex: 1; 
+            min-width: 450px; /* Increased min-width to keep it open */
+            max-width: 800px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-left: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            flex-direction: column;
+            box-shadow: -4px 0 20px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+        
+        /* Resize Handle */
+        .resize-handle {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 8px;
+            cursor: ew-resize;
+            background: transparent;
+            z-index: 10;
+            transition: background 0.2s;
+        }
+        
+        .resize-handle:hover {
+            background: rgba(102, 126, 234, 0.3);
+        }
+        
+        .resize-handle::after {
+            content: '';
+            position: absolute;
+            left: 3px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 2px;
+            height: 40px;
+            background: rgba(102, 126, 234, 0.5);
+            border-radius: 2px;
+        }
+        
+        .globe-header {
+            padding: 20px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+        }
+        
+        .globe-header h2 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .globe-header p {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+        
+        #globe-container {
+            flex: 1;
+            position: relative;
+            background: #f8f9ff;
+            display: flex;
+            align-items: center; /* Center globe vertically */
+            justify-content: center; /* Center globe horizontally */
+        }
+        
+        .globe-info {
+            padding: 16px;
+            background: white;
+            border-top: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        
+        .globe-info h3 {
+            font-size: 13px;
+            font-weight: 600;
+            color: #1a1a2e;
+            margin-bottom: 8px;
+        }
+        
+        .branch-count {
+            font-size: 24px;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 4px;
+        }
+        
+        .branch-label {
+            font-size: 11px;
+            color: #888;
+        }
+
+        /* User Profile Card */
+        .user-profile-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.6));
+            backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255, 255, 255, 0.4);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.03);
+            z-index: 10;
+        }
+
+        .user-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-avatar {
+            width: 42px;
+            height: 42px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 16px;
+            box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);
+            text-transform: uppercase;
+        }
+
+        .user-details {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .user-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1a1a2e;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .user-role {
+            font-size: 11px;
+            color: #667eea;
+            font-weight: 500;
+        }
+
+        .user-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            padding-top: 4px;
+        }
+
+        .stat-item {
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 10px;
+            padding: 10px;
+            border: 1px solid rgba(102, 126, 234, 0.1);
+            transition: all 0.2s;
+        }
+
+        .stat-item:hover {
+            background: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1a1a2e;
+            margin-bottom: 2px;
+        }
+
+        .stat-label {
+            font-size: 10px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .logout-btn {
+            margin-top: 4px;
+            background: rgba(255, 71, 87, 0.1);
+            color: #ff4757;
+            border: none;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .logout-btn:hover {
+            background: #ff4757;
+            color: white;
+        }
+        
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: rgba(102, 126, 234, 0.3);
+            border-radius: 3px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(102, 126, 234, 0.5);
+        }
+        
+        /* Chart styling */
+        .chat-messages canvas {
+            max-width: 100%;
+            height: 500px !important; /* Fixed larger height for better readability */
+            margin-top: 12px;
+            border-radius: 12px;
+            background: #fff;
+            padding: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+        
+        /* Mermaid styling */
+        .mermaid {
+            margin-top: 12px;
+            background: white;
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        
+        /* Globe Tooltip */
+        .globe-tooltip {
+            position: absolute;
+            background: rgba(26, 26, 46, 0.95);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            pointer-events: none;
+            z-index: 1000;
+            white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            opacity: 0;
+            transition: opacity 0.2s, transform 0.1s;
+            transform: translate(-50%, -100%); /* Center above cursor */
+            margin-top: -10px;
+        }
+
+        .globe-tooltip.visible {
+            opacity: 1;
+        }
+
+        /* Thinking Animation */
+        .thinking-msg {
+            align-self: flex-start;
+            background: #f8f9ff;
+            color: #666;
+            padding: 12px 16px;
+            border-radius: 16px 16px 16px 4px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            font-style: italic;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        .dot-flashing {
+            position: relative;
+            width: 6px;
+            height: 6px;
+            border-radius: 5px;
+            background-color: #667eea;
+            color: #667eea;
+            animation: dot-flashing 1s infinite linear alternate;
+            animation-delay: 0.5s;
+        }
+
+        .dot-flashing::before, .dot-flashing::after {
+            content: '';
+            display: inline-block;
+            position: absolute;
+            top: 0;
+        }
+
+        .dot-flashing::before {
+            left: -10px;
+            width: 6px;
+            height: 6px;
+            border-radius: 5px;
+            background-color: #667eea;
+            color: #667eea;
+            animation: dot-flashing 1s infinite alternate;
+            animation-delay: 0s;
+        }
+
+        .dot-flashing::after {
+            left: 10px;
+            width: 6px;
+            height: 6px;
+            border-radius: 5px;
+            background-color: #667eea;
+            color: #667eea;
+            animation: dot-flashing 1s infinite alternate;
+            animation-delay: 1s;
+        }
+
+        @keyframes dot-flashing {
+            0% { background-color: #667eea; }
+            50%, 100% { background-color: rgba(102, 126, 234, 0.2); }
+        }
+
+        /* Markdown Table Styling */
+        .ai-msg table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            font-size: 13px;
+        }
+
+        .ai-msg th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: 600;
+            text-align: left;
+            padding: 12px 16px;
+        }
+
+        .ai-msg td {
+            padding: 10px 16px;
+            border-bottom: 1px solid #eee;
+            color: #333;
+        }
+
+        .ai-msg tr:last-child td {
+            border-bottom: none;
+        }
+
+        .ai-msg tr:nth-child(even) {
+            background-color: #f8f9ff;
+        }
+
+        .ai-msg tr:hover {
+            background-color: #f1f4ff;
+        }
+        
+        /* Table responsive wrapper */
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        /* General Markdown Styling */
+        .ai-msg p {
+            margin-bottom: 8px;
+        }
+        .ai-msg p:last-child {
+            margin-bottom: 0;
+        }
+        .ai-msg strong {
+            font-weight: 600;
+            color: #16213e;
+        }
+        .ai-msg ul, .ai-msg ol {
+            margin-left: 20px;
+            margin-bottom: 10px;
+        }
+        .ai-msg li {
+            margin-bottom: 4px;
+        }
+
+        /* Visualization Pop-up Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(5px);
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal.show {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal-content {
+            max-width: 90%;
+            max-height: 90%;
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            position: relative;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+
+        .modal.show .modal-content {
+            transform: scale(1);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            color: white;
+            font-size: 30px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .modal-close:hover {
+            color: #ff4757;
+        }
+
+        #modal-image {
+            max-width: 100%;
+            max-height: 80vh;
+            display: block;
+            border-radius: 8px;
+        }
+
+        #modal-chart-container {
+            width: 80vw;
+            height: 60vh;
+            display: none;
+        }
+
+        .clickable-viz {
+            cursor: zoom-in;
+            transition: transform 0.2s ease;
+        }
+
+        .clickable-viz:hover {
+            transform: scale(1.02);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+    </style>
+
+</head>
+<body>
+    <div class="app-container">
+        <!-- Left Sidebar - Conversations -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>Recent Conversations</h2>
+                <button class="new-chat-btn" onclick="startNewChat()">+ New Chat</button>
+            </div>
+            <div class="conversation-list" id="conversation-list">
+                <!-- Conversations will be inserted here -->
+            </div>
+        </div>
+        
+        <!-- Main Content - Chat Area -->
+        <div class="main-content">
+            <div class="chat-header">
+                <h1>Agency OS</h1>
+                <p>Ask questions about your data, branches, and workflows</p>
+            </div>
+            
+            <div class="chat-wrapper">
+                <div class="chat-messages" id="chat-messages">
+                    <div class="message-wrapper">
+                        <div class="ai-msg">
+                            Hello! I am your database assistant connected to BigQuery. Ask me anything about your data!
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="chat-input-area">
+                    <div class="input-wrapper">
+                        <input 
+                            type="text" 
+                            id="user-input" 
+                            placeholder="Ask about your data, branches, or workflows..."
+                            autocomplete="off"
+                        >
+                        <button class="send-btn" id="send-btn" onclick="sendMessage()">Send</button>
+                        <button class="stop-btn" id="stop-btn" onclick="stopGeneration()">Stop</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right Sidebar - Globe -->
+        <div class="globe-sidebar" id="globe-sidebar">
+            <div class="resize-handle" id="resize-handle"></div>
+            <div class="globe-header">
+                <h2>Global Branches</h2>
+                <p>Live branch locations</p>
+            </div>
+            <div id="globe-container">
+                <div class="globe-tooltip" id="globe-tooltip"></div>
+            </div>
+            <div class="user-profile-card">
+                <div class="user-header">
+                    <div class="user-avatar" id="user-avatar">U</div>
+                    <div class="user-details">
+                        <div class="user-name" title="{{ user_email }}">{{ user_email }}</div>
+                        <div class="user-role">Administrator</div>
+                    </div>
+                </div>
+                
+                <div class="user-stats" style="flex-direction: column; gap: 12px; align-items: flex-start;">
+                    <div class="stat-item" style="width: 100%;">
+                        <div class="stat-value" id="primary-branch" style="font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">-</div>
+                        <div class="stat-label">Primary Branch</div>
+                    </div>
+                    <div class="stat-item" style="width: 100%;">
+                        <div class="stat-value" id="secondary-branches" style="font-size: 13px; font-weight: 500; color: #555; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">-</div>
+                        <div class="stat-label">Secondary Branches</div>
+                    </div>
+                </div>
+
+                <button class="logout-btn" onclick="localStorage.removeItem('user_profile_cache'); window.location.href='/logout'">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                        <polyline points="16 17 21 12 16 7"></polyline>
+                        <line x1="21" y1="12" x2="9" y2="12"></line>
+                    </svg>
+                    Logout
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Visualization Modal -->
+    <div id="viz-modal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal()">&times;</span>
+            <h2 id="modal-title" style="margin-bottom: 15px; color: #1a1a2e; font-size: 18px;">Visualization</h2>
+            <img id="modal-image" src="" alt="Full size visualization">
+            <div id="modal-chart-container">
+                <canvas id="modal-canvas"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== GLOBAL STATE =====
+        let currentChatId = null;
+        let conversations = {};
+        let scene, camera, renderer, globe, branches = [];
+        let animationId = null;
+        let raycaster, mouse, tooltip;
+        let isProcessing = false; // Flag to track active requests
+        let abortController = null; // Controller to abort requests
+        let hoveredPin = null;
+        
+        // Globe Interaction State
+        let isDragging = false;
+        let previousMousePosition = { x: 0, y: 0 };
+        let autoRotate = true;
+        let rotationSpeed = 0.002;
+        let targetRotationY = 0;
+        let targetRotationX = 0;
+
+        
+        // ===== AUDIO CONTEXT =====
+        
+        // Setup user avatar
+        const userEmail = "{{ user_email }}";
+        if (userEmail) {
+            const initials = userEmail.substring(0, 2).toUpperCase();
+            const avatarParams = document.getElementById('user-avatar');
+            if (avatarParams) avatarParams.textContent = initials;
+        }
+
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playSendSound() {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.1);
+        }
+        
+        function playReceiveSound() {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            oscillator.frequency.value = 600;
+            oscillator.type = 'sine';
+            gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.15);
+        }
+        
+        // ===== MERMAID INITIALIZATION =====
+        mermaid.initialize({ 
+            startOnLoad: false,
+            theme: 'default',
+            securityLevel: 'loose',
+            flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' }
+        });
+
+        // ===== MARKDOWN INITIALIZATION =====
+        function initMarkdown() {
+            if (typeof marked !== 'undefined') {
+                const renderer = new marked.Renderer();
+                renderer.table = function(header, body) {
+                    return `<div class="table-wrapper"><table>
+                        <thead>${header}</thead>
+                        <tbody>${body}</tbody>
+                    </table></div>`;
+                };
+                marked.use({ renderer });
+                console.log('Markdown renderer initialized');
+            }
+        }
+        
+        // ===== THREE.JS GLOBE SETUP =====
+        function initGlobe() {
+            // Initialize Markdown
+            initMarkdown();
+
+            const container = document.getElementById('globe-container');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            
+            console.log('Initializing globe with dimensions:', width, 'x', height);
+            
+            // Scene
+            scene = new THREE.Scene();
+            
+            // Camera - moved further back for smaller globe
+            camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+            camera.position.z = 4.5 * Math.max(1, 550 / width);
+            
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            renderer.setSize(width, height);
+            renderer.setPixelRatio(window.devicePixelRatio); // Fix for high DPI
+            renderer.setClearColor(0xf8f9ff, 1);
+            container.appendChild(renderer.domElement);
+            
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 3, 5);
+            scene.add(directionalLight);
+            
+            // Globe
+            // Globe
+            const geometry = new THREE.SphereGeometry(1, 64, 64);
+            
+            const loader = new THREE.TextureLoader();
+            const material = new THREE.MeshPhongMaterial({
+                map: loader.load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_atmos_2048.jpg'),
+                specularMap: loader.load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_specular_2048.jpg'),
+                normalMap: loader.load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_normal_2048.jpg'),
+                shininess: 15,
+                specular: new THREE.Color(0x333333),
+            });
+            globe = new THREE.Mesh(geometry, material);
+            scene.add(globe);
+            
+            // Grid lines for globe (More subtle)
+            const wireframe = new THREE.LineSegments(
+                new THREE.WireframeGeometry(geometry),
+                new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.05 })
+            );
+            globe.add(wireframe);
+            
+            // Initialize raycaster and mouse for hover detection
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+            tooltip = document.getElementById('globe-tooltip');
+            
+            // Mouse move event for hover detection
+            container.addEventListener('mousemove', onGlobeMouseMove);
+            container.addEventListener('mouseleave', onGlobeMouseLeave);
+            
+            // Drag interaction events
+            container.addEventListener('mousedown', onGlobeMouseDown);
+            container.addEventListener('mouseup', onGlobeMouseUp);
+            // Also handle leaving container as mouseup
+            container.addEventListener('mouseleave', onGlobeMouseUp); 
+            
+            // Zoom interaction
+            container.addEventListener('wheel', onGlobeWheel, { passive: false });
+            
+            console.log('Globe created, fetching branches...');
+            
+            // Fetch and add branch pins
+            fetchBranches();
+            
+            // Start animation loop
+            animate();
+            
+            // Handle resize
+            window.addEventListener('resize', onWindowResize);
+        }
+        
+        function onWindowResize() {
+            const container = document.getElementById('globe-container');
+            if (!container || !camera || !renderer) return;
+
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            
+            // Interactive Scaling:
+            // Adjust camera distance based on width to keep globe size optimized
+            // Base distance is 4.5. As width decreases below 500px, move back to ensure fit.
+            const scaleFactor = Math.max(1, 550 / width); 
+            camera.position.z = 4.5 * scaleFactor;
+
+            renderer.setSize(width, height);
+        }
+        
+        function animate() {
+            animationId = requestAnimationFrame(animate);
+            
+            // Rotation Logic
+            if (globe) {
+                if (autoRotate && !isDragging) {
+                     // Auto-rotate when idle
+                    globe.rotation.y += rotationSpeed; 
+                }
+            }
+            
+            // Pulse pins
+            branches.forEach(pin => {
+                if (pin.userData) {
+                    const scale = 1 + Math.sin(Date.now() * pin.userData.pulseSpeed) * 0.3;
+                    pin.scale.set(scale, scale, scale);
+                }
+            });
+            
+            renderer.render(scene, camera);
+        }
+
+        function onGlobeWheel(event) {
+            event.preventDefault(); // Prevent page scroll
+            
+            const zoomSpeed = 0.002;
+            const minZoom = 1.5;
+            const maxZoom = 10.0;
+            
+            // Adjust camera distance
+            if (camera) {
+                camera.position.z += event.deltaY * zoomSpeed;
+                // Apply bounds
+                camera.position.z = Math.max(minZoom, Math.min(maxZoom, camera.position.z));
+            }
+        }
+
+        // ===== GLOBE EVENT HANDLERS =====
+
+        function onGlobeMouseDown(event) {
+            isDragging = true;
+            previousMousePosition = {
+                x: event.clientX,
+                y: event.clientY
+            };
+        }
+
+        function onGlobeMouseUp(event) {
+            isDragging = false;
+        }
+
+        // Updated Mouse Move to handle both Hover and Drag
+        function onGlobeMouseMove(event) {
+            const container = document.getElementById('globe-container');
+            const rect = container.getBoundingClientRect();
+            
+            // Handle Rotation Dragging
+            if (isDragging && globe) {
+                const deltaMove = {
+                    x: event.clientX - previousMousePosition.x,
+                    y: event.clientY - previousMousePosition.y
+                };
+                
+                // Rotate based on mouse movement
+                // Use a sensitivity factor (0.005)
+                globe.rotation.y += deltaMove.x * 0.005;
+                globe.rotation.x += deltaMove.y * 0.005;
+                
+                // Constraints for X rotation to prevent flipping upside down (+/- 90 degrees)
+                const minRotationX = -Math.PI / 2 + 0.1;
+                const maxRotationX = Math.PI / 2 - 0.1;
+                globe.rotation.x = Math.max(minRotationX, Math.min(maxRotationX, globe.rotation.x));
+                
+                previousMousePosition = {
+                    x: event.clientX,
+                    y: event.clientY
+                };
+            }
+
+            // Calculate mouse position in normalized device coordinates (-1 to +1)
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+            
+            // Update raycaster
+            raycaster.setFromCamera(mouse, camera);
+            
+            // Check for intersections with pins
+            const intersects = raycaster.intersectObjects(branches);
+            
+            if (intersects.length > 0) {
+                const pin = intersects[0].object;
+                
+                if (hoveredPin !== pin) {
+                    hoveredPin = pin;
+                    
+                    // Show tooltip with branch name
+                    if (pin.userData && pin.userData.branch) {
+                        tooltip.textContent = pin.userData.branch.name;
+                        tooltip.classList.add('visible');
+                    }
+                }
+                
+                // Update tooltip position to follow mouse
+                if (tooltip.classList.contains('visible')) {
+                    // Position exactly above the mouse cursor
+                    const tooltipX = event.clientX - rect.left;
+                    const tooltipY = event.clientY - rect.top;
+                    
+                    tooltip.style.left = tooltipX + 'px';
+                    tooltip.style.top = tooltipY + 'px';
+                }
+                
+                // Pause auto-rotation when hovering a pin?
+                autoRotate = false;
+            } else {
+                // No intersection
+                if (hoveredPin) {
+                    hoveredPin = null;
+                    tooltip.classList.remove('visible');
+                }
+                
+                // Resume auto-rotation if not dragging
+                if (!isDragging) {
+                    autoRotate = true;
+                }
+            }
+        }
+        function latLngToVector3(lat, lng, radius) {
+            const phi = (90 - lat) * (Math.PI / 180);
+            const theta = (lng + 180) * (Math.PI / 180);
+            
+            const x = -(radius * Math.sin(phi) * Math.cos(theta));
+            const z = (radius * Math.sin(phi) * Math.sin(theta));
+            const y = (radius * Math.cos(phi));
+            
+            return new THREE.Vector3(x, y, z);
+        }
+        
+        function addBranchPin(branch) {
+            const position = latLngToVector3(branch.lat, branch.lng, 1.05);
+            
+            console.log(`Adding pin for ${branch.name} at`, position);
+            
+            // Pin marker (larger and more visible)
+            const pinGeometry = new THREE.SphereGeometry(0.015, 12, 12);
+            const pinMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0x00ff00,
+                emissive: 0x00ff00,
+                emissiveIntensity: 0.8
+            });
+            const pin = new THREE.Mesh(pinGeometry, pinMaterial);
+            pin.position.copy(position);
+            
+            // Pulsing animation
+            pin.userData = { 
+                originalScale: 1,
+                pulseSpeed: Math.random() * 0.002 + 0.001,
+                branch: branch
+            };
+            
+            globe.add(pin);
+            branches.push(pin);
+        }
+        
+        async function fetchBranches() {
+            try {
+                // Check localStorage cache
+                const cached = localStorage.getItem('branchData');
+                const cacheTime = localStorage.getItem('branchDataTime');
+                const now = Date.now();
+                const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+                
+                let branchData;
+                
+                if (cached && cacheTime && (now - parseInt(cacheTime)) < CACHE_DURATION) {
+                    console.log('Using cached branch data');
+                    branchData = JSON.parse(cached);
+                } else {
+                    console.log('Fetching fresh branch data from server');
+                    const response = await fetch('/api/branches');
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        branchData = data.branches;
+                        // Cache the data
+                        localStorage.setItem('branchData', JSON.stringify(branchData));
+                        localStorage.setItem('branchDataTime', now.toString());
+                        console.log('Cached branch data:', branchData.length, 'branches');
+                    } else {
+                        console.error('Failed to fetch branches:', data.error);
+                        return;
+                    }
+                }
+                
+                // Add pins to globe
+                branchData.forEach(branch => {
+                    addBranchPin(branch);
+                });
+                
+                // Update branch count
+                document.getElementById('branch-count').textContent = branchData.length;
+                
+                console.log(`Added ${branchData.length} branch pins to globe`);
+                
+            } catch (error) {
+                console.error('Error fetching branches:', error);
+            }
+        }
+        
+
+        
+        function onGlobeMouseLeave() {
+            hoveredPin = null;
+            if (tooltip) {
+                tooltip.classList.remove('visible');
+            }
+        }
+        
+        // ===== CHAT FUNCTIONALITY =====
+        function loadConversations() {
+            const storageKey = `chatConversations_${userEmail}`;
+            const saved = localStorage.getItem(storageKey);
+            if (saved) {
+                conversations = JSON.parse(saved);
+            }
+            
+            if (Object.keys(conversations).length === 0) {
+                startNewChat();
+            } else {
+                const sortedIds = Object.keys(conversations).sort((a, b) => 
+                    conversations[b].timestamp - conversations[a].timestamp
+                );
+                loadChat(sortedIds[0]);
+            }
+            
+            renderConversationList();
+        }
+        
+        function saveConversations() {
+            const storageKey = `chatConversations_${userEmail}`;
+            localStorage.setItem(storageKey, JSON.stringify(conversations));
+        }
+        
+        function startNewChat() {
+            const chatId = Date.now().toString();
+            currentChatId = chatId;
+            conversations[chatId] = {
+                id: chatId,
+                title: 'New Conversation',
+                timestamp: Date.now(),
+                messages: []
+            };
+            
+            const chatMessages = document.getElementById('chat-messages');
+            chatMessages.innerHTML = `
+                <div class="message-wrapper">
+                    <div class="ai-msg">
+                        Hello! I am your database assistant connected to BigQuery. Ask me anything about your data!
+                    </div>
+                </div>
+            `;
+            
+            saveConversations();
+            renderConversationList();
+        }
+        
+        function loadChat(chatId) {
+            currentChatId = chatId;
+            const chat = conversations[chatId];
+            
+            const chatMessages = document.getElementById('chat-messages');
+            chatMessages.innerHTML = `
+                <div class="message-wrapper">
+                    <div class="ai-msg">
+                        Hello! I am your database assistant connected to BigQuery. Ask me anything about your data!
+                    </div>
+                </div>
+            `;
+            
+            if (chat && chat.messages) {
+                chat.messages.forEach(msg => {
+                    if (msg.type === 'user') {
+                        appendMessage(msg.text, 'user-msg', false);
+                    } else {
+                        const msgDiv = appendMessage(msg.text, 'ai-msg', false);
+                        
+                        if (msg.visualization) {
+                            if (msg.visualization.type === 'image' && msg.visualization.data) {
+                                const img = document.createElement('img');
+                                img.src = `data:image/png;base64,${msg.visualization.data}`;
+                                img.className = 'clickable-viz';
+                                img.style.maxWidth = '100%';
+                                img.style.borderRadius = '12px';
+                                img.style.marginTop = '12px';
+                                img.onclick = () => openImageModal(img.src, msg.visualization.title || 'Visualization');
+                                msgDiv.appendChild(img);
+                            } else if ((msg.visualization.type === 'flowchart' || msg.visualization.type === 'mermaid') && msg.visualization.data) {
+                                renderFlowchart(msgDiv, msg.visualization.data);
+                            }
+                        }
+                    }
+                });
+            }
+            
+            renderConversationList();
+        }
+        
+        function deleteConversation(chatId, event) {
+            event.stopPropagation();
+            
+            if (confirm('Delete this conversation?')) {
+                delete conversations[chatId];
+                saveConversations();
+                
+                if (chatId === currentChatId) {
+                    const remaining = Object.keys(conversations);
+                    if (remaining.length > 0) {
+                        loadChat(remaining[0]);
+                    } else {
+                        startNewChat();
+                    }
+                } else {
+                    renderConversationList();
+                }
+            }
+        }
+        
+        function renderConversationList() {
+            const list = document.getElementById('conversation-list');
+            list.innerHTML = '';
+            
+            const sortedChats = Object.values(conversations).sort((a, b) => 
+                b.timestamp - a.timestamp
+            );
+            
+            sortedChats.forEach(chat => {
+                const item = document.createElement('div');
+                item.className = `conversation-item ${chat.id === currentChatId ? 'active' : ''}`;
+                item.onclick = () => loadChat(chat.id);
+                
+                item.innerHTML = `
+                    <div class="conversation-title">${chat.title}</div>
+                    <div class="conversation-time">${formatTimestamp(chat.timestamp)}</div>
+                    <button class="delete-btn" onclick="deleteConversation('${chat.id}', event)">🗑️</button>
+                `;
+                
+                list.appendChild(item);
+            });
+        }
+        
+        function formatTimestamp(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
+            
+            if (diffMins < 1) return 'Just now';
+            if (diffMins < 60) return `${diffMins}m ago`;
+            if (diffHours < 24) return `${diffHours}h ago`;
+            if (diffDays < 7) return `${diffDays}d ago`;
+            
+            return date.toLocaleDateString();
+        }
+        
+        async function sendMessage() {
+            if (isProcessing) return; // Prevent multiple submissions
+
+            const input = document.getElementById('user-input');
+            const message = input.value.trim();
+            if (!message) return;
+            
+            playSendSound();
+            
+            if (conversations[currentChatId].title === 'New Conversation') {
+                conversations[currentChatId].title = message.length > 40 ? message.substring(0, 40) + '...' : message;
+            }
+            
+            appendMessage(message, 'user-msg', true);
+            
+            conversations[currentChatId].messages.push({
+                type: 'user',
+                text: message
+            });
+            conversations[currentChatId].timestamp = Date.now();
+            saveConversations();
+            renderConversationList();
+            
+            // Clear input immediately so user can type next message if they want (but can't send yet)
+            input.value = '';
+            
+            // Set processing state
+            isProcessing = true;
+            
+            // Toggle Buttons
+            const sendBtn = document.getElementById('send-btn');
+            const stopBtn = document.getElementById('stop-btn');
+            
+            if (sendBtn) sendBtn.style.display = 'none';
+            if (stopBtn) stopBtn.style.display = 'block';
+
+            
+            try {
+                // Show thinking state
+                const thinkingId = showThinking();
+                // 30s Timeout Controller -> Now using global controller
+                abortController = new AbortController();
+                const timeoutId = setTimeout(() => {
+                    if (abortController) abortController.abort('timeout');
+                }, 120000);
+                
+                try {
+                    const response = await fetch('/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message: message }),
+                        signal: abortController.signal
+                    });
+                    
+                    clearTimeout(timeoutId);
+                    abortController = null;
+
+                    if (!response.ok) {
+                        throw new Error(`Server Error (${response.status})`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    playReceiveSound();
+                    
+                    const msgDiv = appendMessage(data.response, 'ai-msg', true);
+                    
+                    const aiMessage = {
+                        type: 'ai',
+                        text: data.response
+                    };
+                    
+                    const visType = (data.visualization_type || 'none').toLowerCase();
+                    
+                    if (visType === 'image' && data.data && data.data.image) {
+                        const img = document.createElement('img');
+                        img.src = `data:image/png;base64,${data.data.image}`;
+                        img.style.maxWidth = '100%';
+                        img.style.borderRadius = '12px';
+                        img.style.marginTop = '12px';
+                        msgDiv.appendChild(img);
+                        
+                        aiMessage.visualization = {
+                            type: 'image',
+                            data: data.data.image,
+                            title: data.visualization_title
+                        };
+                    } else if (visType === 'flowchart' || visType === 'mermaid') {
+                        await renderFlowchart(msgDiv, data.data);
+                        aiMessage.visualization = {
+                            type: visType,
+                            data: data.data
+                        };
+                    } else if (visType !== 'none' && data.data) {
+                        renderChart(msgDiv, visType, data.visualization_title, data.data);
+                        aiMessage.visualization = {
+                            type: visType,
+                            data: data.data,
+                            title: data.visualization_title
+                        };
+                    }
+                    
+                    conversations[currentChatId].messages.push(aiMessage);
+                    saveConversations();
+                    
+                } catch (fetchError) {
+                    if (fetchError.name === 'AbortError') {
+                        // Check if it was a user stop or timeout
+                        // Note: Standard AbortError doesn't always carry the reason, so we might need a flag or check elapsed time
+                        // But typically we can just show a generic "stopped" message or differentiate if we passed a reason.
+                        // However, standard abort() string reason is experimental in some browsers.
+                        
+                        // We will rely on UI state or just generic message.
+                        // If user stopped, we usually handle it in stopGeneration().
+                        // But fetch throws here.
+                        
+                        // We'll just log it. The stopGeneration function appends the message.
+                        // If it came from timeout, we should append that.
+                        
+                        if (abortController && abortController.signal.aborted) { 
+                            // It was a real abort
+                             console.log('Request aborted');
+                        } else {
+                            // It was a timeout (if we cleared controller in stopGeneration)
+                            // or if we passed 'timeout' reason
+                             appendMessage('Request timed out after 2 minutes. Please try again.', 'ai-msg', true);
+                        }
+                    } else {
+                        throw fetchError;
+                    }
+                } finally {
+                    // Remove thinking state in all cases (success, error, timeout)
+                    hideThinking(thinkingId);
+                }
+                
+            } catch (error) {
+                console.error("Chat Error:", error);
+                if (error.name !== 'AbortError') { // Already handled above if it was an abort
+                     appendMessage(`Error: ${error.message}. Please try again.`, 'ai-msg', true);
+                }
+            } finally {
+                 // Reset processing state
+                isProcessing = false;
+                
+                // Re-enable button
+                const sendBtn = document.getElementById('send-btn');
+                const stopBtn = document.getElementById('stop-btn');
+                
+                if (sendBtn) {
+                    sendBtn.style.display = 'block';
+                    sendBtn.disabled = false;
+                    sendBtn.style.opacity = '1';
+                    sendBtn.style.cursor = 'pointer';
+                }
+                if (stopBtn) stopBtn.style.display = 'none';
+                
+                abortController = null;
+                
+                // Keep focus on input
+                input.focus();
+            }
+        }
+        
+        function stopGeneration() {
+            if (abortController) {
+                abortController.abort();
+                abortController = null;
+                
+                // Hide thinking immediately
+                const thinkingWrapper = document.getElementById('thinking-wrapper');
+                if (thinkingWrapper) thinkingWrapper.remove();
+                
+                appendMessage('Stopped by user.', 'ai-msg', true);
+                
+                isProcessing = false;
+                
+                // Reset Buttons
+                const sendBtn = document.getElementById('send-btn');
+                const stopBtn = document.getElementById('stop-btn');
+                
+                if (sendBtn) {
+                    sendBtn.style.display = 'block';
+                    sendBtn.disabled = false;
+                }
+                if (stopBtn) stopBtn.style.display = 'none';
+            }
+        }
+
+
+        
+        function appendMessage(text, className, shouldScroll = true) {
+            const chatMessages = document.getElementById('chat-messages');
+            const wrapper = document.createElement('div');
+            wrapper.className = 'message-wrapper';
+            
+            const msgDiv = document.createElement('div');
+            msgDiv.className = className;
+            
+            // Use marked to parse Markdown if available, otherwise fallback to text
+            if (typeof marked !== 'undefined' && className === 'ai-msg') {
+                try {
+                    // Normalize text: ensure it's a string
+                    if (typeof text !== 'string') {
+                        console.warn("Markdown parsing received non-string:", typeof text);
+                        text = String(text);
+                    }
+                    
+                    msgDiv.innerHTML = marked.parse(text);
+                } catch (e) {
+                    console.error("Markdown parsing error:", e);
+                    msgDiv.innerText = text;
+                }
+            } else {
+                msgDiv.innerText = text;
+            }
+            
+            // Action Buttons Wrapper
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'action-buttons';
+            
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+
+            if (className === 'ai-msg') {
+                // Export CSV Button (only if table detected)
+                if (text.includes('|') && text.includes('---')) {
+                    const csvBtn = document.createElement('button');
+                    csvBtn.className = 'export-btn';
+                    csvBtn.innerHTML = '📊 CSV';
+                    csvBtn.title = 'Download as CSV';
+                    csvBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        const csvContent = markdownTableToCsv(text);
+                        downloadFile(csvContent, `data-${timestamp}.csv`, 'text/csv');
+                    };
+                    actionsDiv.appendChild(csvBtn);
+
+                    // Export Excel Button
+                    const excelBtn = document.createElement('button');
+                    excelBtn.className = 'export-btn';
+                    excelBtn.innerHTML = '📊 Excel';
+                    excelBtn.title = 'Download as Excel';
+                    excelBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        exportTableToExcel(text);
+                    };
+                    actionsDiv.appendChild(excelBtn);
+                }
+
+                // Export Doc Button (Always)
+                const docBtn = document.createElement('button');
+                docBtn.className = 'export-btn';
+                docBtn.innerHTML = '📄 Doc';
+                docBtn.title = 'Download as Text File';
+                docBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    downloadFile(text, `response-${timestamp}.txt`, 'text/plain');
+                };
+                actionsDiv.appendChild(docBtn);
+            }
+            
+            // Copy Button
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'copy-btn';
+            copyBtn.innerHTML = '📋 Copy';
+            copyBtn.onclick = () => copyMessage(text, copyBtn);
+            
+            actionsDiv.appendChild(copyBtn);
+            msgDiv.appendChild(actionsDiv);
+            wrapper.appendChild(msgDiv);
+            chatMessages.appendChild(wrapper);
+            
+            if (shouldScroll) {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+            
+            return msgDiv;
+        }
+        
+        function copyMessage(text, button) {
+            // Try navigator.clipboard first (Modern API)
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showCopyFeedback(button);
+                }).catch(err => {
+                    console.error('Clipboard API failed:', err);
+                    fallbackCopyTextToClipboard(text, button);
+                });
+            } else {
+                // Fallback for non-secure contexts (HTTP)
+                fallbackCopyTextToClipboard(text, button);
+            }
+        }
+
+        function fallbackCopyTextToClipboard(text, button) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            
+            // Ensure it's not visible but part of DOM
+            textArea.style.position = "fixed";
+            textArea.style.left = "-9999px";
+            textArea.style.top = "0";
+            document.body.appendChild(textArea);
+            
+            textArea.focus();
+            textArea.select();
+
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    showCopyFeedback(button);
+                } else {
+                    console.error('Fallback copy failed');
+                    button.textContent = '❌ Error';
+                }
+            } catch (err) {
+                console.error('Fallback copy error:', err);
+                button.textContent = '❌ Error';
+            }
+
+            document.body.removeChild(textArea);
+        }
+
+        function showCopyFeedback(button) {
+            const originalText = button.textContent;
+            button.textContent = '✓ Copied';
+            setTimeout(() => {
+                button.textContent = originalText;
+            }, 2000);
+        }
+        
+        function showThinking() {
+            const chatMessages = document.getElementById('chat-messages');
+            const wrapper = document.createElement('div');
+            wrapper.className = 'message-wrapper';
+            wrapper.id = 'thinking-wrapper';
+            
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'thinking-msg';
+            
+            // Random thinking text
+            const texts = [
+                "Thinking...",
+                "Analyzing Data...",
+                "Querying BigQuery...",
+                "Generating Insights...",
+                "Processing Workflow...",
+                "Consulting the Database..."
+            ];
+            const text = texts[Math.floor(Math.random() * texts.length)];
+            
+            msgDiv.innerHTML = `
+                <div class="dot-flashing"></div>
+                <span id="thinking-text" style="margin-left: 15px;">${text}</span>
+            `;
+            
+            wrapper.appendChild(msgDiv);
+            chatMessages.appendChild(wrapper);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            // Cycle texts while waiting
+            const intervalId = setInterval(() => {
+                const newText = texts[Math.floor(Math.random() * texts.length)];
+                const el = document.getElementById('thinking-text');
+                if (el) el.textContent = newText;
+            }, 2500);
+            
+            wrapper.dataset.intervalId = intervalId;
+            return 'thinking-wrapper';
+        }
+
+        function hideThinking(id) {
+            const el = document.getElementById(id);
+            if (el) {
+                if (el.dataset.intervalId) {
+                    clearInterval(Number(el.dataset.intervalId));
+                }
+                el.remove();
+            }
+        }
+
+        
+        function renderChart(container, type, title, data) {
+            try {
+                if (!data || !Array.isArray(data) || data.length === 0) {
+                    container.innerHTML += `<div style="color: #ff4757; font-size: 14px; margin-top: 12px;">Error: No data available for chart.</div>`;
+                    return;
+                }
+                
+                const keys = Object.keys(data[0]);
+                if (keys.length === 0) return;
+                
+                let valueKey = keys.find(k => {
+                    const val = data[0][k];
+                    if (typeof val === 'number') return true;
+                    if (typeof val === 'string' && val.trim() !== '' && !isNaN(Number(val))) return true;
+                    return false;
+                });
+                
+                let labelKey;
+                if (valueKey) {
+                    labelKey = keys.find(k => k !== valueKey) || keys[0];
+                } else {
+                    valueKey = keys.length > 1 ? keys[1] : keys[0];
+                    labelKey = keys[0];
+                }
+                
+                const labels = data.map(d => d[labelKey]);
+                const values = data.map(d => Number(d[valueKey]));
+                
+                const canvas = document.createElement('canvas');
+                container.appendChild(canvas);
+                
+                new Chart(canvas, {
+                    type: type,
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: title || valueKey,
+                            data: values,
+                            backgroundColor: [
+                                'rgba(102, 126, 234, 0.6)',
+                                'rgba(118, 75, 162, 0.6)',
+                                'rgba(255, 107, 107, 0.6)',
+                                'rgba(78, 205, 196, 0.6)',
+                                'rgba(255, 195, 113, 0.6)',
+                                'rgba(199, 125, 255, 0.6)'
+                            ],
+                            borderColor: [
+                                'rgba(102, 126, 234, 1)',
+                                'rgba(118, 75, 162, 1)',
+                                'rgba(255, 107, 107, 1)',
+                                'rgba(78, 205, 196, 1)',
+                                'rgba(255, 195, 113, 1)',
+                                'rgba(199, 125, 255, 1)'
+                            ],
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top',
+                                labels: {
+                                    font: { size: 14, weight: 'bold' },
+                                    color: '#333'
+                                }
+                            },
+                            tooltip: {
+                                enabled: true,
+                                backgroundColor: 'rgba(26, 26, 46, 0.9)',
+                                titleFont: { size: 16 },
+                                bodyFont: { size: 14 },
+                                padding: 12,
+                                displayColors: true,
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) label += ': ';
+                                        if (context.parsed.y !== undefined) label += context.parsed.y;
+                                        else if (context.parsed !== undefined) label += context.parsed;
+                                        return label;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: { font: { size: 12 }, color: '#666' },
+                                grid: { color: 'rgba(0,0,0,0.05)' }
+                            },
+                            x: {
+                                ticks: { font: { size: 12 }, color: '#666' },
+                                grid: { display: false }
+                            }
+                        }
+                    }
+                });
+                
+            } catch (err) {
+                console.error("Error rendering chart:", err);
+                container.innerHTML += `<div style="color: #ff4757; font-size: 14px; margin-top: 12px;">Error rendering chart: ${err.message}</div>`;
+            }
+        }
+
+        // Modal Logic
+        let modalChart = null;
+
+        function openImageModal(src, title) {
+            const modal = document.getElementById('viz-modal');
+            const modalImg = document.getElementById('modal-image');
+            const modalTitle = document.getElementById('modal-title');
+            const chartContainer = document.getElementById('modal-chart-container');
+
+            modalTitle.textContent = title;
+            modalImg.src = src;
+            modalImg.style.display = 'block';
+            chartContainer.style.display = 'none';
+
+            modal.classList.add('show');
+        }
+
+        function openChartModal(type, title, labels, values) {
+            const modal = document.getElementById('viz-modal');
+            const modalImg = document.getElementById('modal-image');
+            const modalTitle = document.getElementById('modal-title');
+            const chartContainer = document.getElementById('modal-chart-container');
+            const ctx = document.getElementById('modal-canvas').getContext('2d');
+
+            modalTitle.textContent = title;
+            modalImg.style.display = 'none';
+            chartContainer.style.display = 'block';
+
+            if (modalChart) {
+                modalChart.destroy();
+            }
+
+            modalChart = new Chart(ctx, {
+                type: type,
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: title,
+                        data: values,
+                        backgroundColor: 'rgba(102, 126, 234, 0.6)',
+                        borderColor: 'rgba(102, 126, 234, 1)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true }
+                    }
+                }
+            });
+
+            modal.classList.add('show');
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('viz-modal');
+            modal.classList.remove('show');
+        }
+
+        // Close modal on click outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('viz-modal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        };
+        
+        async function renderFlowchart(container, definition) {
+            if (!definition) return;
+            
+            const mermaidDiv = document.createElement('div');
+            mermaidDiv.className = 'mermaid';
+            const chartId = 'mermaid-' + Math.random().toString(36).substr(2, 9);
+            mermaidDiv.id = chartId;
+            container.appendChild(mermaidDiv);
+            
+            setTimeout(async () => {
+                try {
+                    let cleanDefinition = definition
+                        .replace(/```mermaid\n?|```/g, '')
+                        .replace(/&quot;/g, '"')
+                        .replace(/&lt;/g, '<')
+                        .replace(/&gt;/g, '>')
+                        .trim();
+                    
+                    const renderResult = await mermaid.render(chartId + '-svg', cleanDefinition);
+                    let svgContent = typeof renderResult === 'string' ? renderResult : renderResult.svg;
+                    
+                    if (svgContent) {
+                        mermaidDiv.innerHTML = svgContent;
+                    }
+                } catch (err) {
+                    console.error('Mermaid rendering failed:', err);
+                    mermaidDiv.innerHTML = `<div style="color: #ff4757; font-size: 14px;">Flowchart Error: ${err.message}</div>`;
+                }
+            }, 100);
+        }
+        
+        // ===== EVENT LISTENERS =====
+        document.getElementById('user-input').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        
+        // ===== RESIZE FUNCTIONALITY =====
+        let isResizing = false;
+        let startX = 0;
+        let startWidth = 0;
+        
+        const resizeHandle = document.getElementById('resize-handle');
+        const globeSidebar = document.getElementById('globe-sidebar');
+        
+        resizeHandle.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            startX = e.clientX;
+            startWidth = globeSidebar.offsetWidth;
+            document.body.style.cursor = 'ew-resize';
+            document.body.style.userSelect = 'none';
+            e.preventDefault();
+        });
+        
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            
+            const diff = startX - e.clientX; // Reversed because we're dragging from left edge
+            const newWidth = startWidth + diff;
+            
+            // Enforce min/max constraints
+            if (newWidth >= 350 && newWidth <= 800) {
+                globeSidebar.style.flex = 'none';
+                globeSidebar.style.width = newWidth + 'px';
+                
+                // Trigger globe resize
+                onWindowResize();
+            }
+        });
+        
+        document.addEventListener('mouseup', () => {
+            if (isResizing) {
+                isResizing = false;
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+            }
+        });
+        
+        // ===== INITIALIZATION =====
+        window.addEventListener('load', () => {
+            console.log('Page loaded, initializing...');
+            initGlobe();
+            loadConversations();
+            fetchUserProfile();
+        });
+
+        // ===== PROFILE & CACHING =====
+        async function fetchUserProfile() {
+            const primaryEl = document.getElementById('primary-branch');
+            const secondaryEl = document.getElementById('secondary-branches');
+            
+            // 1. Check Cache
+            const cachedProfile = localStorage.getItem('user_profile_cache');
+            if (cachedProfile) {
+                try {
+                    const data = JSON.parse(cachedProfile);
+                    // Valid for 24 hours? For now infinite as requested "fetch has to be not done"
+                    renderProfile(data);
+                    console.log('Loaded profile from cache');
+                    return; 
+                } catch (e) {
+                    console.error('Cache parse error', e);
+                    localStorage.removeItem('user_profile_cache');
+                }
+            }
+            
+            // 2. Fetch from Network if no cache
+            try {
+                const response = await fetch('/api/profile');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        renderProfile(data);
+                        localStorage.setItem('user_profile_cache', JSON.stringify(data));
+                        console.log('Fetched and cached profile');
+                    }
+                }
+            } catch (err) {
+                console.error('Profile fetch failed', err);
+                primaryEl.textContent = 'Error loading';
+            }
+        }
+
+        function renderProfile(data) {
+            const primaryEl = document.getElementById('primary-branch');
+            const secondaryEl = document.getElementById('secondary-branches');
+            
+            if (primaryEl) primaryEl.textContent = data.primary_branch || 'None';
+            if (secondaryEl) {
+                const branches = data.secondary_branches || [];
+                secondaryEl.textContent = branches.length > 0 ? branches.join(', ') : 'None';
+                secondaryEl.title = branches.join(', '); // Tooltip for full list
+            }
+        }
+        // ===== EXPORT HELPERS =====
+        function downloadFile(content, filename, type) {
+            const blob = new Blob([content], { type: type });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function markdownTableToRows(markdown) {
+            const lines = markdown.split('\n');
+            const rows = [];
+            
+            for (const line of lines) {
+                if (line.trim().startsWith('|')) {
+                    if (line.includes('---')) continue;
+                    
+                    const cells = line.split('|')
+                        .map(cell => cell.trim())
+                        .filter((cell, index, arr) => {
+                             if (index === 0 && cell === '') return false;
+                             if (index === arr.length - 1 && cell === '') return false;
+                             return true;
+                        });
+                    
+                    if (cells.length > 0) {
+                        const cleanCells = cells.map(cell => {
+                            // Extract content if it's a link [text](url) -> text
+                            return cell.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+                        });
+                        rows.push(cleanCells);
+                    }
+                }
+            }
+            return rows;
+        }
+
+        function markdownTableToCsv(markdown) {
+            const rows = markdownTableToRows(markdown);
+            return rows.map(cells => {
+                return cells.map(cell => {
+                    return cell.includes(',') ? `"${cell}"` : cell;
+                }).join(',');
+            }).join('\n');
+        }
+
+        async function exportTableToExcel(text) {
+            const rows = markdownTableToRows(text);
+            if (rows.length === 0) return;
+
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+            
+            try {
+                const response = await fetch('/export_to_excel', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ rows: rows })
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `export_${timestamp}.xlsx`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                } else {
+                    const error = await response.json();
+                    alert('Export failed: ' + (error.error || 'Unknown error'));
+                }
+            } catch (err) {
+                console.error('Excel export error:', err);
+                alert('Excel export failed. Check console for details.');
+            }
+        }
+
+    </script>
+</body>
+</html>

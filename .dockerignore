@@ -1,0 +1,62 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment files
+.env
+.env.local
+
+# Git
+.git/
+.gitignore
+
+# Logs
+*.log
+app.log
+
+# Local databases
+*.db
+local_hackathon.db
+
+# Test files
+test_*.py
+verify_*.py
+inspect_*.py
+list_models.py
+
+# Scripts
+install_dependencies.sh
+setup_bigquery.py
+bq_to_sqlite.py
+sqlite_to_chroma.py
+
+# Documentation
+README*.md
+*.md
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Persistent data (will be mounted as volumes)
+document_vectors/
+chroma_db/
+embeddings_store/

@@ -1,0 +1,15 @@
+Flask
+pandas
+openpyxl
+langchain
+langchain-classic
+langchain-core
+langchain-google-genai
+langchain-community
+langchain-text-splitters
+google-cloud-bigquery
+matplotlib
+seaborn
+python-dotenv
+faiss-cpu
+pypdf

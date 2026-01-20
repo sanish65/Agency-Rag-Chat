@@ -1,0 +1,32 @@
+services:
+  rag-chat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rag-chat-app
+    network_mode: "host"
+    environment:
+      # Google API Key for Generative AI
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      # Google Cloud Project ID
+      - GOOGLE_CLOUD_PROJECT=expert-hackathon-2026
+      # Optional: Path to service account credentials inside container
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/gcp-credentials.json
+    volumes:
+      # Mount credentials file (create this on your host)
+      - ./credentials:/app/credentials:ro
+      # Mount source code for development (live reload)
+      - .:/app
+      # Persistent data volumes
+      - ./document_vectors:/app/document_vectors
+      - ./chroma_db:/app/chroma_db
+      - ./embeddings_store:/app/embeddings_store
+      # Optional: Mount documents directory if you have PDFs to process
+      # - ./documents:/app/documents:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

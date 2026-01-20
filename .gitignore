@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+venv/
+env/
+ENV/
+
+# Environment and credentials
+.env
+.env.local
+credentials/
+*.json
+!vercel.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+app.log
+
+# Local databases
+*.db
+local_hackathon.db
+
+# Data directories
+document_vectors/
+chroma_db/
+embeddings_store/
+
+# OS
+.DS_Store
+Thumbs.db
