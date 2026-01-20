@@ -101,3 +101,5 @@ Note: script_runners are the python code that was created to test the functional
 
 ## Deployment
 I have deployed this project on Render: https://agency-os-bot-4.onrender.com/
+
+Project needs: GCP access control for Bigquery 
